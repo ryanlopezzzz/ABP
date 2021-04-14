@@ -29,7 +29,7 @@ def create(save_dir, exp_folder_name, load_date, save_python_file = False):
             print ("Creation of the directory %s failed" % run_dir)
 
     else: #connects to old run's path if specified in load_date
-        run_dir = os.path.join(exp_dir, run_folder_name)
+        run_dir = os.path.join(exp_dir, load_date)
 
         if os.path.isdir(run_dir):
             print("Successfully connected to previous run %s" % run_dir)
