@@ -3,7 +3,7 @@
 import os
 import datetime
 
-def create(save_dir, exp_folder_name, load_date, save_python_file = False):
+def create(save_dir, exp_folder_name, load_date, save_python_file = False, name = None):
 
     exp_dir = os.path.join(save_dir, exp_folder_name + "/") #Directory where all data for particular experiment type is stored
 
@@ -17,8 +17,11 @@ def create(save_dir, exp_folder_name, load_date, save_python_file = False):
     #Create folder or connect to old folder to store run data
 
     if load_date is None: #creates new directory with date as folder name to save run information
-        currentDT = datetime.datetime.now() 
-        run_folder_name = "%d-%d-%d--%d-%02d-%02d"%(currentDT.month, currentDT.day, currentDT.year, currentDT.hour, currentDT.minute, currentDT.second)
+        if name is None:
+            currentDT = datetime.datetime.now() 
+            run_folder_name = "%d-%d-%d--%d-%02d-%02d"%(currentDT.month, currentDT.day, currentDT.year, currentDT.hour, currentDT.minute, currentDT.second)
+        else:
+            run_folder_name = name
 
         run_dir = os.path.join(exp_dir, run_folder_name) #folder where this run data is stored
 

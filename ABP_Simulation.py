@@ -25,40 +25,10 @@ from cppmd.builder import *
 import cppmd as md
 
 import read_data as rd #reads snapshot text data
-import MSD #calculates MSD
 import directories #used to create directories for saving data
-
-
-# # Folders
-# 
-# All research data is contained in a directory with path variable <em>save_dir</em>
-# <br>
-# <br>
-# Within <em>save_dir</em>, there are different sub-directories corresponding to different types of experiments, with path variable <em>exp_dir</em>
-# <br>
-# <br>
-# Within <em>exp_dir</em>, there are different sub-directories corresponding to different specific runs of the experiment, with path variable <em>run_dir</em>. These folders contain information about the specific run, and are named automatically by the date-time it was first run. Example: "2-24-2021--22-15-52" corresponds to 2/24/2021 at 10:15:52PM
-
-# In[2]:
-
-
-#Directory where all data is saved
-save_dir = "/Users/ryanlopez/Desktop/Python_Programs/Dr_Marchetti_Research/Saved_Data"
-
-
-# In[3]:
-
-
-exp_folder_name = "flocking_transition_vary_Dr_sparse2" #Folder name of experiment directory, don't change inbetween runs unless studying something different
-
-load_date = None #Enter date in format 2-24-2021--22-15-52 (2/24/2021 at 10:15:52PM) to connect to previous run
-#If load_date = None, will start new experiment
-
-
-# In[4]:
-
-
-exp_dir, run_dir, snapshot_dir = directories.create(save_dir, exp_folder_name, load_date)
+import Physical_Quantities.MSD as MSD
+import Physical_Quantities.flocking_factors as flocking_factors
+import Physical_Quantities.various as various
 
 
 # ## ABP Physics
@@ -97,7 +67,7 @@ exp_dir, run_dir, snapshot_dir = directories.create(save_dir, exp_folder_name, l
 # 
 # Fluctuation-Dissipation Theorem: $D_t = k T \mu$
 
-# In[5]:
+# In[2]:
 
 
 #Physical parameters:
@@ -111,24 +81,23 @@ kT = 0 #temperature of the system, typically set to zero
 param_search = True
 
 if not param_search:
-    D_r = 0.6 #rotation diffusion coefficient
+    packing_frac = 1 #rotation diffusion coefficient
 else:
     parser = argparse.ArgumentParser();
     parser.add_argument('--param', help='Varied parameter value for the run.', default=None)
     args = parser.parse_args()
     
-    D_r = float(args.param)
-
+    packing_frac = float(args.param)
 
 #Calculate some parameters:
+D_r = 0.2
 v0 = alpha/gamma_t #self propulsion speed
 mu = 1/gamma_t #mobility
 D_t = kT * mu #translational diffusion coefficient #this comes from Fluctuation-Dissipation Theorem
 kT_rot = D_r * gamma_r #rotational temperature, see brownian_rot_integrator.py
 
 #Box parameters:
-
-phi = 0.5/np.pi #particle number density, phi = N/L^2 
+phi = packing_frac/np.pi #particle number density, phi = N/L^2  # divide by np.pi when r=1
 L = 70 #Simulation box side length, makes square
 radius = 1 #Radius of particles if poly=0 #In initial config, center of particles are not closer than a together?
 poly = 0.3 #Implements polydispersity in particle, r_i = R * (1+ poly * uniform(-0.5, .0.5) )
@@ -145,7 +114,7 @@ J = 1
 #Integration parameters:
 
 warm_up_time = 1e4 #1e0 #Run simulation for this amount of time to reach steady state
-tf = 5e3 #time to run simulation while logging physical quantities
+tf = 1e4 #time to run simulation while logging physical quantities
 tstep = 1e-1 #Time step size for integration
 rand_seed = random.randint(1,10000) #random seed used for Brownian integration
 
@@ -159,14 +128,83 @@ print("Interaction time: " + str(1/(mu*k))+"\n")
 #print("Mean free time between collisions: " + str(L**2 /(2*radius*v0*Np)))
 
 
+# # Folders
+# 
+# All research data is contained in a directory with path variable <em>save_dir</em>
+# <br>
+# <br>
+# Within <em>save_dir</em>, there are different sub-directories corresponding to different types of experiments, with path variable <em>exp_dir</em>
+# <br>
+# <br>
+# Within <em>exp_dir</em>, there are different sub-directories corresponding to different specific runs of the experiment, with path variable <em>run_dir</em>. These folders contain information about the specific run, and are named automatically by the date-time it was first run. Example: "2-24-2021--22-15-52" corresponds to 2/24/2021 at 10:15:52PM
+
+# In[3]:
+
+
+#Directory where all data is saved
+save_dir = "/Users/ryanlopez/Desktop/Python_Programs/Dr_Marchetti_Research/Saved_Data"
+
+
+# In[4]:
+
+
+exp_folder_name = "Vary_phi_and_Dr=0.2" #Folder name of experiment directory, don't change inbetween runs unless studying something different
+
+load_date = None #Enter date in format 2-24-2021--22-15-52 (2/24/2021 at 10:15:52PM) to connect to previous run
+#If load_date = None, will start new experiment
+
+
+# In[5]:
+
+
+name = "D_r=%.4f_and_packing_frac=%.2f"%(D_r,approx_packing)
+exp_dir, run_dir, snapshot_dir = directories.create(save_dir, exp_folder_name, load_date, name=name)
+
+
 # In[6]:
+
+
+run_desc = OrderedDict()
+
+run_desc['gamma_t'] = gamma_t
+run_desc['gamma_r'] = gamma_r
+run_desc['alpha'] = alpha
+run_desc['kT'] = kT
+run_desc['D_r'] = D_r
+run_desc['v0'] = v0
+run_desc['mu'] = mu
+run_desc['D_t'] = D_t
+run_desc['kT_rot'] = kT_rot
+run_desc['phi'] = phi
+run_desc['L'] = L
+run_desc['radius'] = radius
+run_desc['poly'] = poly
+run_desc['Np'] = Np
+run_desc['approx_packing'] = approx_packing
+run_desc['k'] = k
+run_desc['J'] = J
+run_desc['warm_up_time'] = warm_up_time
+run_desc['tf'] = tf
+run_desc['tstep'] = tstep
+run_desc['rand_seed'] = rand_seed
+run_desc['warm_up_nsteps'] = warm_up_nsteps
+run_desc['nsteps'] = nsteps
+
+def write_desc():
+    run_desc_file = open(os.path.join(run_dir, "run_desc.json"), 'w')
+    run_desc_file.write(json.dumps(run_desc))
+    run_desc_file.close()
+write_desc()
+
+
+# In[7]:
 
 
 #creates random initial configuration, saves config to outfile
 random_init(phi, L, radius = radius, rcut=0, poly = poly, outfile=os.path.join(run_dir, 'init.json'))
 
 
-# In[7]:
+# In[8]:
 
 
 reader = md.fast_read_json(os.path.join(run_dir, 'init.json'))  #here we read the json file in c++
@@ -201,7 +239,7 @@ evolver.add_integrator("Brownian Rotation", {"T": kT_rot, "gamma": gamma_r, "see
 evolver.set_time_step(tstep) # Set the time step for all the integrators
 
 
-# In[8]:
+# In[9]:
 
 
 #warms up simulation to reach steady state
@@ -210,7 +248,7 @@ for t in range(warm_up_nsteps):
 print("Warm up time complete")
 
 
-# In[9]:
+# In[10]:
 
 
 total_snapshots = 100 #total number of snapshots to save
@@ -229,170 +267,35 @@ for t in range(nsteps):
 print("done")
 
 
-# In[10]:
-
-
-def get_flocking_factors(exp_data, v0):
-    #vicsek_param = | \sum \vec{n}_i / N |
-    nx_data = exp_data['nx'] #shape: [num of time snapshots, num of particles]
-    ny_data = exp_data['ny']
-    
-    Np = nx_data.shape[1] #number of particles
-    
-    vicsek_param_nx = np.sum(nx_data, axis=1) / Np
-    vicsek_param_ny = np.sum(ny_data, axis=1) / Np
-    
-    vicsek_param = vicsek_param_nx**2 + vicsek_param_ny**2
-    
-    #vel_param = | \sum \vec{v}_i / (N * v0) |
-    
-    vx_data = exp_data['vx'] #shape: [num of time snapshots, num of particles]
-    vy_data = exp_data['vy']
-    
-    vel_param_nx = np.sum(vx_data, axis=1) / (Np * v0)
-    vel_param_ny = np.sum(vy_data, axis=1) / (Np * v0)
-    
-    vel_param = vel_param_nx**2 + vel_param_ny**2
-    
-    return vicsek_param, vel_param
-
-
 # In[11]:
 
 
 exp_data = rd.get_exp_data(snapshot_dir)
+position_data = rd.get_position_data(snapshot_dir)
 
 
 # In[12]:
 
 
-vicsek_param, vel_param = get_flocking_factors(exp_data, v0)
+vicsek_param, vel_param = flocking_factors.get_flocking_factors(exp_data, v0)
 
-plt.plot(vicsek_param)
-plt.plot(vel_param)
+#plt.plot(vicsek_param)
+#plt.plot(vel_param)
 
-
-# In[13]:
-
-
-np.average(vel_param)
-np.average(vicsek_param)
-
-
-# In[14]:
-
-
-run_desc = OrderedDict()
-
-run_desc['gamma_t'] = gamma_t
-run_desc['gamma_r'] = gamma_r
-run_desc['alpha'] = alpha
-run_desc['kT'] = kT
-run_desc['D_r'] = D_r
-run_desc['v0'] = v0
-run_desc['mu'] = mu
-run_desc['D_t'] = D_t
-run_desc['kT_rot'] = kT_rot
-run_desc['phi'] = phi
-run_desc['L'] = L
-run_desc['radius'] = radius
-run_desc['poly'] = poly
-run_desc['Np'] = Np
-run_desc['approx_packing'] = approx_packing
-run_desc['k'] = k
-run_desc['J'] = J
-run_desc['warm_up_time'] = warm_up_time
-run_desc['tf'] = tf
-run_desc['tstep'] = tstep
-run_desc['rand_seed'] = rand_seed
-run_desc['warm_up_nsteps'] = warm_up_nsteps
-run_desc['nsteps'] = nsteps
-
-run_desc['vicsek_param'] = np.average(vicsek_param)
-run_desc['vel_param'] = np.average(vel_param)
-
-
-run_desc_file = open(os.path.join(run_dir, "run_desc.json"), 'w')
-run_desc_file.write(json.dumps(run_desc))
-run_desc_file.close()
+MSD_sim_ensemble, _ = MSD.get_MSD_sim_data(position_data, L)
+dir_dot_vel, dir_dot_vel_norm = various.get_dir_dot_vel(exp_data)
+_, v_mag_data = various.get_vel_mag_distr(exp_data)
 
 
 # In[15]:
 
 
-"""
-#get position data from snapshots
-position_data = rd.get_position_data(snapshot_dir) #shape [num of time snapshots, num of particles, (2) spatial dims]
-"""
+run_desc['vicsek_param'] = np.average(vicsek_param)
+run_desc['vel_param'] = np.average(vel_param)
+np.save(os.path.join(run_dir, "MSD_sim_ensemble.npy"), MSD_sim_ensemble)
+np.save(os.path.join(run_dir, "dir_dot_vel.npy"), dir_dot_vel)
+np.save(os.path.join(run_dir, "dir_dot_vel_norm.npy"), dir_dot_vel_norm)
+np.save(os.path.join(run_dir, "v_mag_data.npy"), v_mag_data)
 
-
-# Theoretical predictions for MSD is (see "Minimal model of active colloids highlights the role of mechanical
-# interactions...")
-# <br>
-# <br>
-# $<\Delta r(t)^2> = 4D_t t + 2v_0^2 \tau_r [t-\tau_r (1-exp(-t/\tau_r))]$
-# 
-# <br>
-# Note the definition that $\tau_r = 1/D_r$.
-
-# In[16]:
-
-
-"""
-#Calculate theoretical MSD:
-
-times = np.linspace(0,tf,num=total_snapshots-1)
-tau_r = 1/D_r
-MSD_theory = 4*D_t*times+2*(v0**2)*tau_r*(times-tau_r*(1-np.exp(-times/tau_r)))
-"""
-
-
-# Experimental MSD can be calculated from displacement, so I consider the difference in positions at each time step. The periodic boundary conditions must be accounted for. I make the assumption the in 1 time step the particle will never traverse more than half of the boxes length in any dimension (or else actual displacement becomes unclear). The formula used for displacement in the x dimension $D_x$ going from position $x_i$ to $x_f$ is:
-# <br>
-# <br>
-# $D_x = \left[ \left(x_f-x_i+\frac{3L_x}{2} \right)\% L_x \right] - \frac{L_x}{2} $
-# <br>
-# <br>
-# Where $\%$ denotes the modulo operator. This formula can be verified by checking all cases. Same formula for y dimension.
-
-# In[17]:
-
-
-"""
-#Calculate MSD from Simulation: 
-MSD_sim_ensemble, MSD_sim = MSD.get_MSD_sim_data(position_data, L)
-"""
-
-
-# In[18]:
-
-
-"""
-#Plot various MSD:
-
-#matplotlib inline
-caption=r"MSD study for Active Brownian Particles with no interactions. Ensemble consists of %d Particles. Parameters are $D_r = %.3f, D_t = %.2f, \mu=%.1f, v_0=%.3f$."%(Np,D_r,D_t,mu,v0)             
-
-fig, ax = plt.subplots(figsize=(14,7))
-ax.plot(times, MSD_theory, color = "blue", label='Theory MSD')
-ax.plot(times, MSD_sim_ensemble, color = "red", label='Ensemble MSD')
-ax.plot(times, MSD_sim.T[0], color = "purple", label='Single Particle MSD')
-plt.yscale('log')
-plt.xscale('log')
-
-ax.set(xlabel='time (s)', ylabel=r'$<\Delta r^2>$',
-       title='Various MSD')
-ax.legend()
-
-fig.text(.5, -.05, caption, ha='center', fontsize=12)
-plt.show()
-"""
-
-
-# In[19]:
-
-
-#### Plots the particles in the box
-#%matplotlib widget
-#dump.show(notebook=True)
+write_desc()
 
