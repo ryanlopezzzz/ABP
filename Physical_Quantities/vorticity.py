@@ -1,4 +1,5 @@
 import numpy as np
+import vtk
 """
 Calculating Vorticity with Smoothed Particle Hydrodynamics:
 
@@ -25,44 +26,72 @@ Therefore:
     \vec{\omega} \left(\vec{r}_i \right) \approx \frac{1}{\rho\left(\vec{r}_i\right)} \sum_j m_j (\vec{r}_j - \vec{r}_i) \times (\vec{v}_j-\vec{v}_i) \frac{W( \left|\vec{r}_i-\vec{r}_j \right|, h)}{h^2}
 \end{align*}
 Where Gaussian Kernal $W = exp \left(-\frac{1}{2h^2} \left|\vec{r}_i -\vec{r}_j\right|^2 \right) / (2 \pi h^2)$ is used. Note in this implementation, m=1.
+
+To enforce periodic boundary conditions, use this formula for position difference:
+\begin{align*}
+    D_x = \left[ \left(x_2-x_1+\frac{3L_x}{2} \right)\% L_x \right] - \frac{L_x}{2}
+\end{align*}
+Where \% denotes the modulo operator. This can be verified by checking each case.
 """
 
-def get_vorticity(exp_data, x, y, h):
+def get_vorticity(exp_data, x, y, h, L, vec_field='velocity', include_density=False):
     """
     :param x: and :param y: should be equal to 1d np array of each axis.
     :param h: determines how wide to spread smoothing
+    :param L: Length of the box
+    :param vec_field: Either "velocity" or "director", determines which vector field to take vorticity of
+    :param include_density: If True, multiplies vorticity by \rho.
     """
-
     X, Y = np.meshgrid(x, y) #shape: [grid_points_x, grid_points_y]
+    """
+    Reshape all arrays to [num_snapshots, grid_points_x, grid_points_y, num of particles]. (or any dimension may be 1)
+    """
+    X = X[None,:,:,None]
+    Y = Y[None,:,:,None]
+    exp_data_x = exp_data['x'][:,None,None,:]
+    exp_data_y = exp_data['y'][:,None,None,:]
+    if vec_field == 'velocity':
+        exp_data_vx = exp_data['vx'][:,None,None,:]
+        exp_data_vy = exp_data['vy'][:,None,None,:]
+    elif vec_field == 'director':
+        exp_data_vx = exp_data['nx'][:,None,None,:]
+        exp_data_vy = exp_data['ny'][:,None,None,:]
+    else:
+        print('Invalid vector field')
     
-    W = np.exp( (-1/(2*h**2)) * ( (X[None,:,:,None] - exp_data['x'][:,None,None,:])**2 + (Y[None,:,:,None] - exp_data['y'][:,None,None,:])**2 ) ) #shape: [num_snapshots, grid_points_x, grid_points_y, num_particles]
+    rj_minus_ri_x = exp_data_x-X #j index goes over particles, i index goes over grid points
+    rj_minus_ri_y = exp_data_y-Y
+  
+    rj_minus_ri_x = ((rj_minus_ri_x + (3*L/2)) % L) - (L/2) #enforce periodic boundary conditions
+    rj_minus_ri_y = ((rj_minus_ri_y + (3*L/2)) % L) - (L/2)
     
-    vx = np.sum(W * exp_data['vx'][:,None,None,:], axis=-1) / np.sum(W, axis=-1) #shape: [num_snapshots, grid_points_x, grid_points_y] (Note: Summing over all the particles)
-    vy = np.sum(W * exp_data['vy'][:,None,None,:], axis=-1) / np.sum(W, axis=-1)
+    """
+    Start calculation
+    """
+    W = np.exp((-1/(2*h**2)) * ((rj_minus_ri_x)**2+(rj_minus_ri_y)**2))
     
-    r_j_minus_r_i = np.concatenate(
-        (
-            exp_data['x'][:,None,None,:,None] - X[None,:,:,None,None],
-            exp_data['x'][:,None,None,:,None] - Y[None,:,:,None,None]
-        ), axis=-1
-    ) #shape: [num_snapshots, grid_points_x, grid_points_y, num_particles, 2]
+    #vx and vy are the interpolated velocities at the grid points
+    vx = np.sum(W*exp_data_vx, axis=-1) / np.sum(W, axis=-1) #shape: [num_snapshots, grid_points_x, grid_points_y] 
+    vy = np.sum(W*exp_data_vy, axis=-1) / np.sum(W, axis=-1) # (Note: Summing over all the particles)
     
-    v_j_minus_v_i = np.concatenate(
-        (
-            exp_data['vx'][:,None,None,:,None] - vx[:,:,:,None,None],
-            exp_data['vy'][:,None,None,:,None] - vy[:,:,:,None,None]
-        ), axis=-1
-    ) #shape: [num_snapshots, grid_points_x, grid_points_y, num_particles, 2]
+    rj_minus_ri = np.stack((rj_minus_ri_x, rj_minus_ri_y),axis=-1) #[num_snapshots, grid_points_x, grid_points_y, num of particles,2]
+    vj_minus_vi = np.stack((exp_data_vx - vx[...,None], exp_data_vy - vy[...,None]), axis=-1)
 
-    r_j_minus_r_i_cross_v_j_minus_v_i = np.cross(r_j_minus_r_i, v_j_minus_v_i) #shape: [num_snapshots, grid_points_x, grid_points_y, num_particles]
+    rj_minus_ri_cross_vj_minus_vi = np.cross(rj_minus_ri, vj_minus_vi) #shape: [num_snapshots, grid_points_x, grid_points_y, num of particles
     
-    vorticity = h**(-2) * np.sum(r_j_minus_r_i_cross_v_j_minus_v_i*W, axis=-1) / np.sum(W, axis=-1) #shape: [num_snapshots, grid_points_x, grid_points_y]
+    if not include_density:
+        vorticity = h**(-2) * np.sum(rj_minus_ri_cross_vj_minus_vi*W, axis=-1)/ np.sum(W, axis=-1) #shape: [num_snapshots, grid_points_x, grid_points_y]
+    elif include_density:
+        vorticity = h**(-2) * np.sum(rj_minus_ri_cross_vj_minus_vi*W, axis=-1) #shape: [num_snapshots, grid_points_x, grid_points_y]
     
-    return vorticity
+    return vorticity   
+    
 
-#def dump_vtp_vorticity(vorticity):
+def dump_vtp_vorticity(vorticity):
     """
     Takes as input the output of get_vorticity and enables plotting in paraview
     """
+    pass #Add code to do this
+
     
     

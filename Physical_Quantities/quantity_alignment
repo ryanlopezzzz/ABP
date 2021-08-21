@@ -1,16 +1,30 @@
 import numpy as np
 import pdb
 
-def calculate_fourier(quantity, exp_data, L=70, min_wave_length=5, num_bins=12, debug=False):
+def quantity_alignment(quantity, exp_data, L=70, particle_diameter=2, debug=False):
     """
-    Computes the average power for different wavelengths and sorts into bins. Follows equation: $F(q_x, q_y) = \frac{1}{N} \sum_{i=1}^N exp(i q_x x_i + i q_y y_i) ) \cdot Quantity_i$, $P(q_x, q_y) = F(q_x, q_y) F(q_x, q_y)^*$, and returns $\Braket{P(q_x, q_y) }_{\sqrt{q_x^2 + q_y^2}=q}$.
+    Computes quantity Q(r) as defined in Caprini "Hidden velocity ordering in dense suspensions of self-propelled disks".
     
     :param quantity: numpy array of shape [num of time snapshots, num of particles] to take fourier transform of.
     :param L: Length of simulation box.
-    :param min_wave_length: Should be less than or equal to the mean radius of particles.
     """
     if debug is True: 
         pdb.set_trace()
+        
+    k_vals = np.arange(1,5)
+    
+    x_data = exp_data['x'] #shape: [num of time snapshots, num of particles]
+    y_data = exp_data['y']
+    
+    """
+    Reshape all arrays
+    """
+    x_data = np.expand_dims(x_data, 2)
+    x_data = np.repeat(x_data, x_data.shape[-1], axis=2) #final shape: [num of time snapshots, num of particles, num of particles]
+    y_data = np.expand_dims(y_data, 2)
+    y_data = np.repeat(y_data, y_data.shape[-1], axis=2) #final shape: [num of time snapshots, num of particles, num of particles]
+    
+        
     
     #q_vals = (2*np.pi/L) * np.arange(np.floor(L/min_wave_length)-14, np.floor(L/min_wave_length)) #q is wavevector, largest value should be less than 2pi/ min_wave_length
     q_vals = (2*np.pi/L) * np.arange(0, np.floor(L/min_wave_length)) #q is wavevector, largest value should be less than 2pi/ min_wave_length
