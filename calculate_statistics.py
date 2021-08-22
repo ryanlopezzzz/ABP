@@ -7,8 +7,8 @@ dir_dot_vel_norm : \sum (n_i \dot v_i / |v_i|) / N
 dir_cross_vel : \sum (n_i \cross v_i) / N
 dir_cross_vel_norm : \sum (n_i \cross v_i / |v_i|) / N
 """
-save_dir = "/Users/ryanlopez/Desktop/Python_Programs/Dr_Marchetti_Research/Saved_Data"
-exp_folder_name = "J_Packing_Phase_Diagram" #Folder name of experiment directory
+save_dir = "/Users/ryanlopez/Desktop/Python_Programs/Dr_Marchetti_Research/Server_Data"
+exp_folder_name = "liquid_vary_J_Dr" #Folder name of experiment directory
 
 import os
 import numpy as np
