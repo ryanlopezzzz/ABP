@@ -42,16 +42,27 @@ def get_vel_mag_distr(exp_data):
     """
     vx_data = exp_data['vx'] #shape: [num of time snapshots, num of particles]
     vy_data = exp_data['vy']
-    
     v_mag_data = np.sqrt(vx_data**2 + vy_data**2)
-    
-    v_mag_data_avg = np.sum(v_mag_data, axis=1)
+    v_mag_data_avg = np.sum(v_mag_data, axis=1) #This equation doesn't seem to make sense - confirm it is what you want
     
     #To Graph:
     #ax.hist(v_mag_data_avg, bins=n_bins)
     
     return v_mag_data_avg, v_mag_data
-    
+
+def get_vel_mag_rel_var(exp_data):
+    """
+    Computes the average variance of velocity magnitude across particles. 
+    """
+    vx_data = exp_data['vx'] #shape: [num of time snapshots, num of particles]
+    vy_data = exp_data['vy']
+    v_mag_data = np.sqrt(vx_data**2 + vy_data**2)
+    v_mag_var = np.var(v_mag_data, axis=1) #variance across particles
+    v_mag_mean = np.average(v_mag_data, axis=1)
+    v_mag_var_rel = v_mag_var / (v_mag_mean**2)
+    return v_mag_var_rel, v_mag_data
+
+
     
 
     

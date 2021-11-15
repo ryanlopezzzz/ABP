@@ -8,22 +8,15 @@
 
 import sys
 import os
+import json
 import numpy as np
 import random
-import matplotlib
-import matplotlib.pyplot as plt
-import datetime
-import pdb #python debugger
 from collections import OrderedDict
 import argparse
 sys.path.insert(1, '/Users/ryanlopez/ABPTutorial/c++') #Connects to ABP Folder github.com/ryanlopezzzz/ABPTutorial
 from cppmd.builder import *
 import cppmd as md
-import read_data as rd #reads snapshot text data
 import directories #used to create directories for saving data
-import Physical_Quantities.MSD as MSD
-import Physical_Quantities.flocking_factors as flocking_factors
-import Physical_Quantities.various as various
 
 
 # ## Active Brownian Particle (ABP) Physics
@@ -60,24 +53,23 @@ Throughout all simulations there are only four variables which are usually varie
     v0           :   Active Self Propulsion Speed
     packing_frac :   Approx. Packing Fraction (Defined as \pi * <R>^2 * Num particles / Area of Box)
 """
-param_search = False #If True, params for run are determined from command line (Good for trying lots of params)
+param_search = True #If True, params for run are determined from command line (Good for trying lots of params)
+
+v0 = 0.01
+packing_frac = 0.8
+velocity_align = False
+polar_align = True
+assert(not velocity_align or not polar_align)
 
 if param_search:
     parser = argparse.ArgumentParser()
     parser.add_argument('--params', nargs='+', help='Varied parameter value for the run.', default=None)
     args = parser.parse_args()
     
-    J = float(args.params[0]) #This variable determined by 
+    J = float(args.params[0])
     D_r = float(args.params[1])
 
-J=2
-D_r=0.03
-v0=0.15 #np.sqrt(2 * gamma_t * D_r * Teff)
-packing_frac=0.6 
-
-
 # In[55]:
-
 
 """
 Assigned physical parameters:
@@ -86,12 +78,13 @@ gamma_t = 1.0 #translational friction coefficient
 gamma_r = 1.0 #rotational friction coefficient
 kT = 0 #temperature of the system, typically set to zero
 radius = 1 #Average radius of particles
-poly = 0.3 #Implements polydispersity in particle, r_i = R * (1+ poly * uniform(-0.5, .0.5) )
+poly = 0.15 #Implements polydispersity in particle, r_i = R * (1+ poly * uniform(-0.5, .0.5) )
 k = 1 #spring constant for harmonic force
 L = 70 #Simulation box side length
+vel_align_norm = False
 
 """
-Calculated physical paramters:
+Calculated physical parameters:
 """
 Teff = 0.5 * gamma_t * v0**2 / D_r
 alpha = v0 * gamma_t 
@@ -104,16 +97,14 @@ Np = int(round(phi*L**2)) #number of particles
 """
 Simulation computation parameters:
 """
-warm_up_time = 8e3 #Run simulation for this amount of time to reach steady state
-tf = 2e3 #Time to run simulation while logging physical quantities, after reach steady state
+warm_up_time = 1e4  #Run simulation for this amount of time to reach steady state
+tf = 1e4 #Time to run simulation while logging physical quantities, after reach steady state
 tstep = 1e-2 #Time step size for integration
 warm_up_nsteps = int(warm_up_time / tstep) #number of integration steps for warming up
 nsteps = int(tf / tstep) #number of int. steps for logging physical quantites
 rand_seed = random.randint(1,10000) #random seed used for Brownian integration
 
-
 # In[56]:
-
 
 print("Orientational Correlation Time: " + str(1/D_r if D_r !=0 else "infinity") + "\n")
 print("Harmonic interaction time: " + str(1/(mu*k))+"\n")
@@ -133,9 +124,10 @@ print("Mean free time between collisions from self propulsion: " + str(L**2 /(2*
 # In[63]:
 
 
-save_dir = "/Users/ryanlopez/Desktop/Python_Programs/Dr_Marchetti_Research/Saved_Data"
-exp_folder_name = "glass_vary_J_Dr"
-run_folder_name = "D_r=%.4f_and_J=%.4f"%(D_r,J)
+save_dir = "/home/ryanlopez/Polar_Align_Saved_Data"
+exp_folder_name = 'looking_for_vortices'
+#exp_folder_name = "longer_phi=%.2f_and_v0=%.4f_longer"%(packing_frac, v0)
+run_folder_name = "J=%.4f_and_Dr=%.4f"%(J, D_r)
 
 exp_dir, run_dir, snapshot_dir = directories.create(save_dir, exp_folder_name, run_folder_name)
 
@@ -161,7 +153,8 @@ run_desc = OrderedDict({
     'warm_up_time':warm_up_time,
     'tf':tf,
     'tstep':tstep,
-    'rand_seed':rand_seed
+    'rand_seed':rand_seed,
+    "vel_align_norm":vel_align_norm
 })
 def write_desc():
     run_desc_file = open(os.path.join(run_dir, "run_desc.json"), 'w')
@@ -179,7 +172,6 @@ random_init(phi, L, radius = radius, rcut=0, poly = poly, outfile=os.path.join(r
 
 # In[66]:
 
-
 reader = md.fast_read_json(os.path.join(run_dir, 'init.json'))  #here we read the json file in c++
 system = md.System(reader.particles, reader.box)
 
@@ -195,8 +187,11 @@ evolver.add_force("Soft Repulsive Force", {"k": k})
 # Create self-propulsion, self-propulsion strength alpha
 evolver.add_force("Self Propulsion", {"alpha": alpha})
 
-# Create pairwise polar alignment with alignment strength J =
-evolver.add_torque("Velocity Align", {"k": J})
+# Create pairwise alignment
+if velocity_align == True:
+    evolver.add_torque("Velocity Align", {"k": J, "norm": vel_align_norm})
+elif polar_align == True:
+    evolver.add_torque("Polar Align", {"k": J})
 
 #Add integrators
 
@@ -230,9 +225,10 @@ for t in range(nsteps):
         print("Time step : ", t)
     evolver.evolve()    # Evolve the system by one time step
     if t % int(nsteps/total_snapshots) == 0:     #Save snapshot of the observable data
-        snapshot_file_path = os.path.join(snapshot_dir, 'snapshot_{:05d}.txt'.format(t))
+        snapshot_num = int(t*total_snapshots/nsteps)
+        snapshot_file_path = os.path.join(snapshot_dir, 'snapshot_{:05d}.txt'.format(snapshot_num))
         dump.dump_data(snapshot_file_path) #Saves data in .txt file
-        snapshot_file_path = os.path.join(snapshot_dir, 'snapshot_{:05d}.vtp'.format(t))
-        dump.dump_vtp(snapshot_file_path) #Saves data in .vtp file for visualization
+        #snapshot_file_path = os.path.join(snapshot_dir, 'snapshot_{:09d}.vtp'.format(t))
+        #dump.dump_vtp(snapshot_file_path) #Saves data in .vtp file for visualization
 print("done")
 

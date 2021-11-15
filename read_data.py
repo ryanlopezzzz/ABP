@@ -31,10 +31,3 @@ def get_exp_data(snapshot_dir):
         exp_data[var_names[obs]] = data[obs]
     
     return exp_data
-
-def get_position_data(snapshot_dir): #returns array with shape [num of time snapshots, num of particles, (2) spatial dims]
-    exp_data = get_exp_data(snapshot_dir)
-    
-    position_data = np.stack((exp_data['x'],exp_data['y']), axis=2)
-    
-    return position_data

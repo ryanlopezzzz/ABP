@@ -3,8 +3,6 @@ import pdb
 
 def quantity_alignment(quantity, exp_data, L=70, particle_diameter=2, debug=False):
     """
-    Computes quantity Q(r) as defined in Caprini "Hidden velocity ordering in dense suspensions of self-propelled disks".
-    
     :param quantity: numpy array of shape [num of time snapshots, num of particles] to take fourier transform of.
     :param L: Length of simulation box.
     """

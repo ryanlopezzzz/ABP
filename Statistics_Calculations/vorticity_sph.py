@@ -1,5 +1,4 @@
 import numpy as np
-import vtk
 """
 Calculating Vorticity with Smoothed Particle Hydrodynamics:
 
@@ -85,13 +84,6 @@ def get_vorticity(exp_data, x, y, h, L, vec_field='velocity', include_density=Fa
         vorticity = h**(-2) * np.sum(rj_minus_ri_cross_vj_minus_vi*W, axis=-1) #shape: [num_snapshots, grid_points_x, grid_points_y]
     
     return vorticity   
-    
-
-def dump_vtp_vorticity(vorticity):
-    """
-    Takes as input the output of get_vorticity and enables plotting in paraview
-    """
-    pass #Add code to do this
 
     
     
