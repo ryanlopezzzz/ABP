@@ -1,87 +1,42 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# # 2D Simulation of Active Brownian Particles with Velocity Alignment
-
-# In[34]:
-
-
 import sys
 import os
 import json
 import numpy as np
-import random
-from collections import OrderedDict
 import argparse
 sys.path.insert(1, '/Users/ryanlopez/ABPTutorial/c++') #Connects to ABP Folder github.com/ryanlopezzzz/ABPTutorial
 from cppmd.builder import *
 import cppmd as md
-import directories #used to create directories for saving data
 
+#Load parameters for simulation
+parser = argparse.ArgumentParser()
+parser.add_argument('--paramsFilename', help='Parameters for the run.')
+args = parser.parse_args()
+with open(args.paramsFilename, 'r') as params_file:
+    run_desc = json.load(params_file)
 
-# ## Active Brownian Particle (ABP) Physics
-# 
-# We consider a system of active colloids with velocity alignment in 2D. The dynamics are described by the coupled Langevin Equations:
-# <br>
-# <br>
-# $\dot{\textbf{r}}_i = v_0 \hat{\textbf{n}} + \mu \sum_j \textbf{F}_{ij} +\xi_i^t$
-# <br>
-# $\dot{\theta}_i = J(\textbf{v}_i \times \hat{\textbf{n}}) \cdot \hat{\textbf{z}} +  \xi_i^r$
-# <br>
-# <br>
-# Where both $\xi^t$ and $\xi^r$ are Gaussian white noise which satisfy:
-# <br>
-# <br>
-# $<\xi_i^t(t) \xi_j^t (t')> = 2D_t \delta_{ij} \delta(t-t') $
-# <br>
-# $<\xi_i^r (t) \xi_j^r (t')> = 2D_r \delta_{ij} \delta(t-t')$
-# <br>
-# <br>
-# We restrict our system to be at zero temperature ($D_t=0$) with unit mobility ($\mu = 1$) and harmonic pair repulsion forces when particles overlap $\textbf{F}_{ij} = -k(R_i+R_j-r_{ij})\hat{\textbf{r}}_{ij}$
-# 
-# 
-# 
-
-# In[52]:
-
-
-"""
-Throughout all simulations there are only four variables which are usually varied
-
-    J            :   Orientational Torque Coefficient
-    D_r          :   Rotational Diffusion Rate
-    v0           :   Active Self Propulsion Speed
-    packing_frac :   Approx. Packing Fraction (Defined as \pi * <R>^2 * Num particles / Area of Box)
-"""
-param_search = True #If True, params for run are determined from command line (Good for trying lots of params)
-
-v0 = 0.01
-packing_frac = 0.8
-velocity_align = False
-polar_align = True
-assert(not velocity_align or not polar_align)
-
-if param_search:
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--params', nargs='+', help='Varied parameter value for the run.', default=None)
-    args = parser.parse_args()
-    
-    J = float(args.params[0])
-    D_r = float(args.params[1])
-
-# In[55]:
-
-"""
-Assigned physical parameters:
-"""
-gamma_t = 1.0 #translational friction coefficient
-gamma_r = 1.0 #rotational friction coefficient
-kT = 0 #temperature of the system, typically set to zero
-radius = 1 #Average radius of particles
-poly = 0.15 #Implements polydispersity in particle, r_i = R * (1+ poly * uniform(-0.5, .0.5) )
-k = 1 #spring constant for harmonic force
-L = 70 #Simulation box side length
-vel_align_norm = False
+J = run_desc['J']
+D_r = run_desc['D_r']
+v0 = run_desc['v0']
+print('v0 is: ' + str(v0))
+packing_frac = run_desc['packing_frac']
+gamma_t = run_desc['gamma_t']
+gamma_r = run_desc['gamma_r']
+kT = run_desc['kT']
+radius = run_desc['radius']
+poly = run_desc['poly']
+k = run_desc['k']
+L = run_desc['L']
+warm_up_time = run_desc['warm_up_time']
+tf = run_desc['tf']
+tstep = run_desc['tstep']
+rand_seed = run_desc['rand_seed']
+vel_align_norm = run_desc['vel_align_norm']
+velocity_align = run_desc['velocity_align']
+polar_align = run_desc['polar_align']
+total_snapshots = run_desc['total_snapshots']
+exp_dir = run_desc['exp_dir']
+run_dir = run_desc['run_dir']
+snapshot_dir = run_desc['snapshot_dir']
 
 """
 Calculated physical parameters:
@@ -93,84 +48,15 @@ D_t = kT * mu #translational diffusion coefficient, this comes from Fluctuation-
 kT_rot = D_r * gamma_r #rotational temperature, see brownian_rot_integrator.py
 phi = packing_frac / (np.pi*radius**2) #particle number density, phi = N/(L^2 * <R^2>)
 Np = int(round(phi*L**2)) #number of particles
-
-"""
-Simulation computation parameters:
-"""
-warm_up_time = 1e4  #Run simulation for this amount of time to reach steady state
-tf = 1e4 #Time to run simulation while logging physical quantities, after reach steady state
-tstep = 1e-2 #Time step size for integration
 warm_up_nsteps = int(warm_up_time / tstep) #number of integration steps for warming up
 nsteps = int(tf / tstep) #number of int. steps for logging physical quantites
-rand_seed = random.randint(1,10000) #random seed used for Brownian integration
-
-# In[56]:
 
 print("Orientational Correlation Time: " + str(1/D_r if D_r !=0 else "infinity") + "\n")
 print("Harmonic interaction time: " + str(1/(mu*k))+"\n")
 print("Mean free time between collisions from self propulsion: " + str(L**2 /(2*radius*v0*Np) if v0!=0 else "infinity"))
 
-
-# # Folders
-# 
-# All research data is contained in a directory with path variable <em>save_dir</em>
-# <br>
-# <br>
-# Within <em>save_dir</em>, there are different sub-directories corresponding to different types of experiments, with path variable <em>exp_dir</em>
-# <br>
-# <br>
-# Within <em>exp_dir</em>, there are different sub-directories corresponding to different specific runs of the experiment, with path variable <em>run_dir</em>. These folders contain information about the specific run, and are typically named by the parameters of that particular run.
-
-# In[63]:
-
-
-save_dir = "/home/ryanlopez/Polar_Align_Saved_Data"
-exp_folder_name = 'looking_for_vortices'
-#exp_folder_name = "longer_phi=%.2f_and_v0=%.4f_longer"%(packing_frac, v0)
-run_folder_name = "J=%.4f_and_Dr=%.4f"%(J, D_r)
-
-exp_dir, run_dir, snapshot_dir = directories.create(save_dir, exp_folder_name, run_folder_name)
-
-
-# In[64]:
-
-
-"""
-run_desc is an Ordered Dictionary that contains all the data necessary to reproduce the simulation
-"""
-run_desc = OrderedDict({
-    'J':J,
-    'D_r':D_r,
-    'v0':v0,
-    'packing_frac':packing_frac,
-    'gamma_t':gamma_t,
-    'gamma_r':gamma_r,
-    'kT':kT,
-    'radius':radius,
-    'poly':poly,
-    'k':k,
-    'L':L,
-    'warm_up_time':warm_up_time,
-    'tf':tf,
-    'tstep':tstep,
-    'rand_seed':rand_seed,
-    "vel_align_norm":vel_align_norm
-})
-def write_desc():
-    run_desc_file = open(os.path.join(run_dir, "run_desc.json"), 'w')
-    run_desc_file.write(json.dumps(run_desc))
-    run_desc_file.close()
-write_desc()
-
-
-# In[65]:
-
-
 #creates random initial configuration, saves config to outfile
 random_init(phi, L, radius = radius, rcut=0, poly = poly, outfile=os.path.join(run_dir, 'init.json'))
-
-
-# In[66]:
 
 reader = md.fast_read_json(os.path.join(run_dir, 'init.json'))  #here we read the json file in c++
 system = md.System(reader.particles, reader.box)
@@ -203,20 +89,11 @@ evolver.add_integrator("Brownian Rotation", {"T": kT_rot, "gamma": gamma_r, "see
 
 evolver.set_time_step(tstep) # Set the time step for all the integrators
 
-
-# In[67]:
-
-
 #warms up simulation to reach steady state
 for t in range(warm_up_nsteps):
     evolver.evolve()
 print("Warm up time complete")
 
-
-# In[68]:
-
-
-total_snapshots = 100 #total number of snapshots to save
 print("Saving observables every %s time steps"%(int(nsteps/total_snapshots)))
 
 #simulation while logging quantities:
@@ -231,4 +108,3 @@ for t in range(nsteps):
         #snapshot_file_path = os.path.join(snapshot_dir, 'snapshot_{:09d}.vtp'.format(t))
         #dump.dump_vtp(snapshot_file_path) #Saves data in .vtp file for visualization
 print("done")
-
