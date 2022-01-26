@@ -47,7 +47,7 @@ default_run_desc = OrderedDict({
     'k': 1,
     'L': 70,
     'warm_up_time': 1e5,
-    'tf': 1e5,
+    'tf': 5e5,
     'tstep': 1e-1,
     'rand_seed': None,
     'vel_align_norm': False,
@@ -58,20 +58,21 @@ default_run_desc = OrderedDict({
 
 if __name__ == '__main__':
     processes = []
-    for phi in [0.4,0.6,0.8,1]:
-        for v0 in [0.01,0.03,0.1]:
+    for phi in [0.4, 0.6, 0.8, 1]:
+        for v0 in [0.01, 0.03,0.1]:
             starttime = time.time()
 
             folder_run_desc = copy.deepcopy(default_run_desc)
             folder_run_desc['packing_frac'] = phi
             folder_run_desc['v0'] = v0
-            for J in np.logspace(-2,1,num=4):
+            for Jv in np.logspace(-3,0,num=4):
                 for D_r in np.logspace(-3,0,num=4):
+                    J=(Jv/v0)
                     run_desc = copy.deepcopy(folder_run_desc)
                     run_desc['J'] = J
                     run_desc['D_r'] = D_r
                     run_desc['rand_seed'] = random.randint(1,10000)
-                    save_folder_name = os.path.join("/home/ryanlopez", 'Velocity_Align_Vary_Phi_V_Saved_Data')
+                    save_folder_name = os.path.join("/home/ryanlopez", 'Velocity_Align_Vary_Phi_V_Saved_Data2')
                     exp_folder_name = "phi=%.4f_and_v0=%.4f"%(phi, v0)
                     run_folder_name = "J=%.4f_and_Dr=%.4f"%(J, D_r)
                     exp_dir, run_dir, snapshot_dir = directories.get_dir_names(save_folder_name, exp_folder_name, run_folder_name)
