@@ -26,7 +26,7 @@ def get_msd(exp_data, L, msd_type = "normal"):
         roll_position_data = [3 4 5]
         roll_position_data = [4 5]            (start_t_index=nsteps-1)
         """
-        roll_position_data = np.roll(position_data,-1*start_t_index)
+        roll_position_data = np.roll(position_data,-1*start_t_index, axis=0)
         roll_position_data = roll_position_data[:nsteps-start_t_index,:,:] #rolls position data back and deletes excess
                 
         """
@@ -35,7 +35,7 @@ def get_msd(exp_data, L, msd_type = "normal"):
         x_f_minus_x_i = np.diff(roll_position_data, axis=0) #takes difference of position elements at different times    
         actual_disp = ((x_f_minus_x_i + (3*L/2)) % L) - (L/2) #account for periodic boundary conditions
         msd_disp = get_disp_for_msd_type(actual_disp, msd_type)    
-        net_disp = np.cumsum(disp, axis=0) #net vector displacement is the sum of the displacements at all previous times
+        net_disp = np.cumsum(msd_disp, axis=0) #net vector displacement is the sum of the displacements at all previous times
         MSD_sim = np.sum(np.square(net_disp),axis=2) #Pythagorean theorem: MSD = \sum (\delta x_i^2)
         MSD_sim_ensemble = np.average(MSD_sim, axis=1) #Average MSD across all particles in ensemble
         
