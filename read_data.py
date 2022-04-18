@@ -31,3 +31,15 @@ def get_exp_data(snapshot_dir):
         exp_data[var_names[obs]] = data[obs]
     
     return exp_data
+
+def get_snapshot_data(snapshot_filename):
+    #returns a dictionary with keys ['id', 'x', 'y', 'ipx', 'ipy', 'nx', 'ny', 'vx', 'vy']
+    #exp_data dict values are of shape [num of particles]
+    with open(snapshot_filename, 'r') as snapshot_file:
+        variable_names = snapshot_file.readline().split()
+        variable_names = variable_names[1:] #There is a "#" at beginning of first line, not an observable
+    data = np.loadtxt(snapshot_filename).T #shape: num variables, num_particles
+    snapshot_data = {} #reorganize into python dictionary
+    for variable_index, variable_name in enumerate(variable_names):
+        snapshot_data[variable_name] = data[variable_index,:]
+    return snapshot_data
