@@ -37,6 +37,7 @@ total_snapshots = run_desc['total_snapshots']
 exp_dir = run_desc['exp_dir']
 run_dir = run_desc['run_dir']
 snapshot_dir = run_desc['snapshot_dir']
+init_filename = run_desc.get('init_filename')
 
 """
 Calculated physical parameters:
@@ -55,10 +56,12 @@ print("Orientational Correlation Time: " + str(1/D_r if D_r !=0 else "infinity")
 print("Harmonic interaction time: " + str(1/(mu*k))+"\n")
 print("Mean free time between collisions from self propulsion: " + str(L**2 /(2*radius*v0*Np) if v0!=0 else "infinity"))
 
-#creates random initial configuration, saves config to outfile
-random_init(phi, L, radius = radius, rcut=0, poly = poly, outfile=os.path.join(run_dir, 'init.json'))
+if init_filename is None:
+    #creates random initial configuration, saves config to outfile
+    init_filename = os.path.join(run_dir, 'init.json')
+    random_init(phi, L, radius = radius, rcut=0, poly = poly, outfile=init_filename)
 
-reader = md.fast_read_json(os.path.join(run_dir, 'init.json'))  #here we read the json file in c++
+reader = md.fast_read_json(init_filename)  #here we read the json file in c++
 system = md.System(reader.particles, reader.box)
 
 dump = md.Dump(system)          # Create a dump object
