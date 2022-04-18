@@ -1,4 +1,8 @@
 import numpy as np
+import resource
+gigabyte = int(1e9)
+resource.setrlimit(resource.RLIMIT_AS, (3*gigabyte, 10*gigabyte)) #sets memory limit to avoid large calculations
+
 """
 Calculating Vorticity with Smoothed Particle Hydrodynamics:
 
@@ -85,5 +89,20 @@ def get_vorticity(exp_data, x, y, h, L, vec_field='velocity', include_density=Fa
     
     return vorticity   
 
+def get_density(exp_data, h, L):
+    """
+    :param h: determines how wide to spread smoothing
+    :param L: Length of the box
+    """
+    #Reshape all arrays to [num_snapshots, num_of_particles, num of particles]. (or any dimension may be 1)   
+    rj_minus_ri_x = exp_data['x'][:,:,None]-exp_data['x'][:,None,:]
+    rj_minus_ri_y = exp_data['y'][:,:,None]-exp_data['y'][:,None,:]
+  
+    rj_minus_ri_x = ((rj_minus_ri_x + (3*L/2)) % L) - (L/2) #enforce periodic boundary conditions
+    rj_minus_ri_y = ((rj_minus_ri_y + (3*L/2)) % L) - (L/2)
     
-    
+    """
+    Start calculation
+    """
+    W = np.exp((-1/(2*h**2)) * ((rj_minus_ri_x)**2+(rj_minus_ri_y)**2))
+    return W
