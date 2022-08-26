@@ -1,3 +1,7 @@
+"""
+Script for running a single ABP simulation.
+"""
+
 import sys
 import os
 import json

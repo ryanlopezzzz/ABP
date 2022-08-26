@@ -1,3 +1,7 @@
+"""
+Computes director cross velocity, still need to implement to save this data.
+"""
+
 import numpy as np
 
 def get_dir_cross_vel(exp_data):

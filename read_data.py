@@ -1,3 +1,7 @@
+"""
+Reads saved simulation data in .txt format and convers to dictionary of numpy arrays.
+"""
+
 import os
 import numpy as np
 

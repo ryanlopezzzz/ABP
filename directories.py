@@ -1,4 +1,6 @@
-#Creates directories for saving experiment data
+"""
+Creates directories for saving simulation data. None of those directories are included here.
+"""
 import os
 
 def get_dir_names(save_dir, exp_folder_name, run_folder_name):

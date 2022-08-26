@@ -1,3 +1,7 @@
+"""
+Computes MSD and MSD minus flocking, still need to implement so this data is saved.
+"""
+
 import numpy as np
 
 """
