@@ -1,3 +1,5 @@
+Contents:
+
 ABP_Simulation.py - Runs a single simulation.
 
 
@@ -11,3 +13,6 @@ saved_data/ - Folder which shows example of how data is saved as pickle. Only a 
 
 
 Analysis_Calculations/ - Code for MSD and director cross velocity which aren't implemented to save to pickle yet
+
+
+Phase_Diagrams/ - Plots all phase diagrams uploaded to Dropbox.
