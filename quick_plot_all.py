@@ -41,7 +41,7 @@ def edges_from_centers_linear(centers):
 
 def edges_from_centers_log(centers):
     """
-    Returns bine edges for histogram given array of center spaced linearly
+    Returns bin edges for histogram given array of center spaced linearly
     """
     centers_log = np.log(centers)
     edges_log = edges_from_centers_linear(centers_log)
@@ -57,9 +57,21 @@ Jv_bins = edges_from_centers_log(Jv_vals)
 folder_names = ['phi=0.4000_and_v0=0.0100', 'phi=0.4000_and_v0=0.0300', 'phi=0.4000_and_v0=0.1000', 
     'phi=0.6000_and_v0=0.0100', 'phi=0.6000_and_v0=0.0300', 'phi=0.6000_and_v0=0.1000', 
     'phi=0.8000_and_v0=0.0100', 'phi=0.8000_and_v0=0.1000', 'phi=0.8000_and_v0=0.0300',
-    'phi=1.0000_and_v0=0.0100'
+    'phi=1.0000_and_v0=0.0100', 'phi=1.0000_and_v0=0.0300', 'phi=1.0000_and_v0=0.1000'
                 ]
-save_dir = "/home/ryanlopez/Polar_Align_Vary_Phi_V_Saved_Data/"
+save_dir = "/home/ryanlopez/Polar_Align_Vary_Phi_V_Saved_Data2/"
+phase_diagram_dir = os.path.join(save_dir, 'phase_diagrams')
+vicsek_image_dir = os.path.join(save_dir, 'phase_diagrams', 'vicsek_order_param')
+dir_cross_vel_image_dir = os.path.join(save_dir, 'phase_diagrams', 'dir_cross_vel_norm')
+dir_cross_vel_same_image_dir = os.path.join(save_dir, 'phase_diagrams', 'dir_cross_vel_norm_same_color_bar')
+if not os.path.isdir(phase_diagram_dir):
+    os.mkdir(phase_diagram_dir)
+if not os.path.isdir(vicsek_image_dir):
+    os.mkdir(vicsek_image_dir)
+if not os.path.isdir(dir_cross_vel_image_dir):
+    os.mkdir(dir_cross_vel_image_dir)
+if not os.path.isdir(dir_cross_vel_same_image_dir):
+    os.mkdir(dir_cross_vel_same_image_dir)
 
 for folder_name in folder_names:
     phi = float(folder_name[4:10])
@@ -97,7 +109,6 @@ for folder_name in folder_names:
     plt.yscale('log')
     fig.text(.5, -0.05, r"Vicsek Order Parameter = $\left| \sum \vec{n}_i \right| / N$", ha='center', fontsize=12)
     fig.text(.5, -0.13, simulation_desc, ha='center', fontsize=12)
-    vicsek_image_dir = os.path.join(save_dir, 'phase_diagrams', 'vicsek_order_param')
     save_fig_pdf(vicsek_image_dir, '%s.pdf'%folder_name)
 
     #plot dir cross vel norm
@@ -112,13 +123,12 @@ for folder_name in folder_names:
     plt.yscale('log')
     fig.text(.5, -0.05, r"Director Cross Velocity Norm = $\sum \left|\vec{n}_i \times \hat{v}_i \right| / N$", ha='center', fontsize=12)
     fig.text(.5, -0.13, simulation_desc, ha='center', fontsize=12)
-    dir_cross_vel_image_dir = os.path.join(save_dir, 'phase_diagrams', 'dir_cross_vel_norm')
     save_fig_pdf(dir_cross_vel_image_dir, '%s.pdf'%folder_name)
 
     #plot with same color range
     fig, ax = plt.subplots()
     xedges, yedges = np.meshgrid(Jv_bins,Dr_bins)
-    plot = ax.pcolormesh(xedges,yedges,dir_cross_vel_norm_values, vmin=0, vmax=1)
+    plot = ax.pcolormesh(xedges,yedges,dir_cross_vel_norm_values, vmin=0, vmax=0.15)
     plt.colorbar(plot)
     plt.title("Dir cross Vel Norm Phase Diagram")
     plt.xlabel(plt_xlabel)
@@ -127,7 +137,7 @@ for folder_name in folder_names:
     plt.yscale('log')
     fig.text(.5, -0.05, r"Director Cross Velocity Norm = $\sum \left|\vec{n}_i \times \hat{v}_i \right| / N$", ha='center', fontsize=12)
     fig.text(.5, -0.13, simulation_desc, ha='center', fontsize=12)
-    dir_cross_vel_image_dir = os.path.join(save_dir, 'phase_diagrams', 'dir_cross_vel_norm_same_color_bar')
-    save_fig_pdf(dir_cross_vel_image_dir, '%s.pdf'%folder_name)
+    save_fig_pdf(dir_cross_vel_same_image_dir, '%s.pdf'%folder_name)
 
     plt.close('all')
+print('Finished saving all diagrams')

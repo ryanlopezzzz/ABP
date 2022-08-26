@@ -39,38 +39,38 @@ def run_on_thread(run_dir):
 default_run_desc = OrderedDict({
     'J': 0.1, 
     'D_r': 0.1, 
-    'v0': 0.01,
-    'packing_frac': 0.6,
+    'v0': 0.03, #fix at this value
+    'packing_frac': 0.6, #fix at this value
     'gamma_t': 1,
     'gamma_r': 1,
     'kT': 0,
     'radius': 1,
     'poly': 0,
     'k': 1,
-    'L': 250,
+    'L': 200,
     'warm_up_time': 1e5,
-    'tf': 5e5,
+    'tf': 2.5e5,
     'tstep': 0.01,
     'rand_seed': None,
     'vel_align_norm': False,
-    'velocity_align': False,
-    'polar_align': True,
-    'total_snapshots': 2000
+    'velocity_align': True,
+    'polar_align': False,
+    'total_snapshots': 1000
 })
 
 if __name__ == '__main__':
     processes = []
-    save_folder_name = os.path.join("/home/ryanlopez", f'Polar_Align_Box_L=250')
+    save_folder_name = os.path.join("/home/ryanlopez", f'Force_Align_Box_L=200_July_8')
     if not os.path.isdir(save_folder_name):
         os.mkdir(save_folder_name)
     starttime = time.time()
     folder_run_desc = copy.deepcopy(default_run_desc)
-    J_vals = np.logspace(-4, -1, num=13)
-    D_r_vals = np.logspace(-4, -1, num=13)
-    for J_val in J_vals:
+    Jv_vals = np.logspace(-4, 0, num=17)
+    D_r_vals = np.logspace(-4, -1, num=13)[:-2] #excluding top two rows of Dr
+    for Jv_val in Jv_vals:
         for D_r_val in D_r_vals:
             run_desc = copy.deepcopy(folder_run_desc)
-            J = J_val
+            J = Jv_val / default_run_desc['v0']
             D_r = D_r_val
             run_desc['J'] = J
             run_desc['D_r'] = D_r
